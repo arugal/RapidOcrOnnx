@@ -54,10 +54,9 @@ jobs:
       # 编译
       - name: build
         run: |
-          pwd
           wget https://github.com/benjaminwan/musl-cross-builder/raw/main/musl-cross.toolchain.cmake -O musl-cross.toolchain.cmake
           chmod a+x build-default.sh
-          ./build-default.sh "${{ matrix.arch_type }}" "/opt/${{ matrix.arch_type }}"
+          ./build-default.sh
 
       # install文件夹改名linux，并使用7z压缩
       - name: 7zip
