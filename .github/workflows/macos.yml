@@ -12,7 +12,7 @@ jobs:
 
     env:
       ONNX_VERSION: 1.15.1
-      ONNX_PKG_NAME: onnxruntime-v1.15.1-macos-static
+      ONNX_PKG_NAME: onnxruntime-v1.15.1-macos-12-static
       CV_VERSION: 4.8.1
       CV_PKG_NAME: opencv-4.8.1-macos
       BIN_PKG_NAME: macos-bin

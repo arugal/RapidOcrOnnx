@@ -1,0 +1,79 @@
+name: linux
+
+on:
+  push:
+    branches:
+      - dev
+
+jobs:
+  linux:
+    runs-on: ubuntu-22.04
+
+    strategy:
+      fail-fast: false
+      matrix:
+        arch_type: [x86_64-linux-musl]
+
+    name: ${{ matrix.arch_type }}
+
+    env:
+      TOOLCHAIN_VERSION: 20231224
+      ONNX_VERSION: 1.15.1
+      ONNX_PKG_NAME: onnxruntime-v1.15.1-${{ matrix.arch_type }}-static
+      CV_VERSION: 4.8.1
+      CV_PKG_NAME: opencv-4.8.1-${{ matrix.arch_type }}
+      BIN_PKG_NAME: linux-bin-${{ matrix.arch_type }}
+      JNI_PKG_NAME: linux-jni-${{ matrix.arch_type }}
+      CLIB_PKG_NAME: linux-clib-${{ matrix.arch_type }}
+
+    steps:
+      # 检出代码
+      - uses: actions/checkout@v3
+
+      # 部署musl
+      - name: deploy musl
+        run: |
+          wget https://github.com/benjaminwan/musl-cross-builder/releases/download/${{ env.TOOLCHAIN_VERSION }}/${{ matrix.arch_type }}.7z -O ${{ matrix.arch_type }}.7z
+          7z x ${{ matrix.arch_type }}.7z -aoa
+          mv ${{ matrix.arch_type }}/ /opt/${{ matrix.arch_type }}/
+
+      # 下载onnxruntime-static
+      - name: download onnxruntime-static
+        run: |
+          cd onnxruntime-static
+          wget https://github.com/RapidAI/OnnxruntimeBuilder/releases/download/${{ env.ONNX_VERSION }}/${{ env.ONNX_PKG_NAME }}.7z -O ${{ env.ONNX_PKG_NAME }}.7z
+          7z x ${{ env.ONNX_PKG_NAME }}.7z -aoa
+
+      # 下载opencv-static
+      - name: download opencv-static
+        run: |
+          cd opencv-static
+          wget https://github.com/RapidAI/OpenCVBuilder/releases/download/${{ env.CV_VERSION }}/${{ env.CV_PKG_NAME }}.7z -O ${{ env.CV_PKG_NAME }}.7z
+          7z x ${{ env.CV_PKG_NAME }}.7z -aoa
+
+      # 编译
+      - name: build
+        run: |
+          pwd
+          wget https://github.com/benjaminwan/musl-cross-builder/raw/main/musl-cross.toolchain.cmake -O musl-cross.toolchain.cmake
+          chmod a+x build-default.sh
+          ./build-default.sh "${{ matrix.arch_type }}" "/opt/${{ matrix.arch_type }}"
+
+      # install文件夹改名linux，并使用7z压缩
+      - name: 7zip
+        run: |
+          mkdir ${{ env.BIN_PKG_NAME }}
+          cp run-benchmark.sh ${{ env.BIN_PKG_NAME }}/run-benchmark.sh
+          cp run-test.sh ${{ env.BIN_PKG_NAME }}/run-test.sh
+          cp -r images ${{ env.BIN_PKG_NAME }}/images
+          mv Linux-BIN-CPU/install/bin ${{ env.BIN_PKG_NAME }}/Linux-BIN-CPU
+          cp others/README-bin.txt ${{ env.BIN_PKG_NAME }}/README.txt
+          7z a ${{ env.BIN_PKG_NAME }}.7z ${{ env.BIN_PKG_NAME }}
+          mkdir ${{ env.JNI_PKG_NAME }}
+          mv Linux-JNI-CPU/install ${{ env.JNI_PKG_NAME }}/Linux-JNI-CPU
+          cp others/README-jni.txt ${{ env.JNI_PKG_NAME }}/README.txt
+          7z a ${{ env.JNI_PKG_NAME }}.7z ${{ env.JNI_PKG_NAME }}
+          mkdir ${{ env.CLIB_PKG_NAME }}
+          mv Linux-CLIB-CPU/install ${{ env.CLIB_PKG_NAME }}/Linux-CLIB-CPU
+          cp others/README-clib.txt ${{ env.CLIB_PKG_NAME }}/README.txt
+          7z a ${{ env.CLIB_PKG_NAME }}.7z ${{ env.CLIB_PKG_NAME }}
